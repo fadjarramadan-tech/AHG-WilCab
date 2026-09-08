@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pencocokan Data AHG & EFS - BNI</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <style>
+        body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .navbar-bni { background-color: #f15a24; color: white; }
+        .card-custom { border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        
+        /* Penyesuaian Tabel agar Lebih Rapi & Fit Content */
+        .table-custom th { background-color: #1b365d; color: white; font-size: 0.8rem; text-align: center; vertical-align: middle; white-space: nowrap; padding: 10px 8px; }
+        .table-custom td { font-size: 0.82rem; vertical-align: middle; padding: 8px; }
+        
+        /* Mencegah teks patah aneh dan membuat beberapa kolom pas secara ringkas */
+        .col-nowrap { white-space: nowrap; }
+        
+        .loading-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
+        .modal-body-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; max-height: 65vh; overflow-y: auto; padding: 15px; }
+        .detail-item { background: #f8f9fa; padding: 8px 12px; border-radius: 6px; border-left: 3px solid #1b365d; }
+        .detail-label { font-size: 0.75rem; color: #6c757d; font-weight: 600; text-transform: uppercase; }
+        .detail-value { font-size: 0.9rem; color: #333; font-weight: 500; word-break: break-word; }
+        .selected-badge { font-weight: 600; color: #1b365d; background: #e7f1ff; padding: 4px 8px; border-radius: 4px; display: inline-block; font-size: 0.78rem; }
+        .guideline-box { background-color: #fff8f5; border-left: 4px solid #f15a24; border-radius: 6px; }
+		
+		/* Styling Modern untuk Pop-up Detail AHG */
+        .modal-content.card-custom { border: none; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+        .modal-header-custom { background: linear-gradient(135deg, #1b365d 0%, #0f2038 100%); color: white; padding: 18px 24px; }
+        .modal-body-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-height: 65vh; overflow-y: auto; padding: 20px; background-color: #f8fafc; }
+        
+        .detail-card { background: #ffffff; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0; border-left: 4px solid #f15a24; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .detail-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+        .detail-label { font-size: 0.72rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .detail-value { font-size: 0.88rem; color: #1e293b; font-weight: 600; word-break: break-word; }
+        
+        @media (max-width: 768px) {
+            .modal-body-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-dark navbar-bni shadow-sm mb-4">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand mb-0 h1 fw-bold"><i class="fa-solid fa-building-columns me-2"></i> AHG Connect</span>
+            <span class="navbar-text text-white small">NSD 2026</span>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4">
+        
+        <!-- PANDUAN PENGGUNAAN (Bisa dibuat collapse seperti sebelumnya) -->
+        <div class="card card-custom guideline-box p-3 mb-3">
+            <div class="d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#guidelineCollapse" aria-expanded="false" aria-controls="guidelineCollapse" style="cursor: pointer;">
+                <h6 class="fw-bold text-dark mb-0"><i class="fa-solid fa-circle-question text-warning me-2"></i> Panduan Singkat Penggunaan Aplikasi</h6>
+                <button class="btn btn-sm btn-outline-secondary border-0 py-0"><i class="fa-solid fa-chevron-down"></i></button>
+            </div>
+            <div class="collapse mt-2" id="guidelineCollapse">
+                <hr class="text-muted opacity-25 my-2">
+                <div class="row g-2 text-secondary small">
+                    <div class="col-md-4">
+                        <div class="p-2 bg-white rounded shadow-sm border-start border-primary border-3">
+                            <strong>1. Tab Dashboard Progress:</strong> Pantau statistik kelengkapan pengisian kode project di setiap wilayah secara visual.
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-2 bg-white rounded shadow-sm border-start border-success border-3">
+                            <strong>2. Tab Data & Pencocokan:</strong> Kelola data sewa AHG, gunakan filter wilayah, dan pilih data EFS via pop-up.
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-2 bg-white rounded shadow-sm border-start border-warning border-3">
+                            <strong>3. Simpan Perubahan:</strong> Klik tombol simpan di bawah tabel utama untuk memperbarui database.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NAVIGASI TAB MENU (PEMISAH HALAMAN) -->
+        <ul class="nav nav-pills mb-3" id="appTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active fw-bold px-4 py-2" id="progress-tab" data-bs-toggle="pill" data-bs-target="#progressPane" type="button" role="tab" aria-controls="progressPane" aria-selected="true">
+                    <i class="fa-solid fa-chart-pie me-2"></i> Dashboard Progress Wilayah
+                </button>
+            </li>
+            <li class="nav-item ms-2" role="presentation">
+                <button class="nav-link fw-bold px-4 py-2" id="table-tab" data-bs-toggle="pill" data-bs-target="#tablePane" type="button" role="tab" aria-controls="tablePane" aria-selected="false">
+                    <i class="fa-solid fa-table-list me-2"></i> Tabel Pencocokan Data AHG
+                </button>
+            </li>
+        </ul>
+
+        <!-- KONTEN YANG DIPISAH BERDASARKAN TAB -->
+        <div class="tab-content" id="appTabContent">
+            
+            <!-- PANE 1: HALAMAN DASHBOARD PROGRESS -->
+            <div class="tab-pane fade show active" id="progressPane" role="tabpanel" aria-labelledby="progress-tab">
+                <div class="card card-custom p-4 mb-5">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h4 class="fw-bold text-dark mb-1">Statistik Progress Pengisian Wilayah</h4>
+                            <p class="text-muted small mb-0">Ringkasan persentase kelengkapan pencocokan Kode Project EFS per wilayah.</p>
+                        </div>
+                        <button class="btn btn-outline-primary btn-sm" onclick="fetchData()"><i class="fa-solid fa-rotate me-1"></i> Perbarui Statistik</button>
+                    </div>
+                    <div class="row g-3" id="wilayahProgressContainer">
+                        <!-- Kartu progress per wilayah dirender di sini -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANE 2: HALAMAN TABEL UTAMA AHG & EFS -->
+            <div class="tab-pane fade" id="tablePane" role="tabpanel" aria-labelledby="table-tab">
+                <div class="card card-custom p-4 mb-5">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+                        <div>
+                            <h4 class="fw-bold text-dark mb-1">Daftar Data AHG & Pencocokan Kode Project EFS</h4>
+                            <p class="text-muted small mb-0">Tinjau ringkasan sewa dan lakukan pencocokan data project.</p>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <label for="filterWilayah" class="fw-bold small text-secondary mb-0">Filter Wilayah:</label>
+                            <select id="filterWilayah" class="form-select form-select-sm" style="width: 150px;" onchange="filterTableByWilayah()">
+                                <option value="">Semua Wilayah</option>
+                            </select>
+                            <button class="btn btn-primary btn-sm ms-2" onclick="fetchData()"><i class="fa-solid fa-rotate me-1"></i> Muat Ulang</button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table id="ahgTable" class="table table-striped table-bordered table-custom w-100">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>Operating Unit</th>
+                                    <th>Wilayah</th>
+                                    <th>No. Registrasi (Lease No.)</th>
+                                    <th>Nama Penyewa</th>
+                                    <th>Tgl Mulai Sewa</th>
+                                    <th>Jangka Waktu</th>
+                                    <th>Jatuh Tempo</th>
+                                    <th>Total Nominal Sewa</th>
+                                    <th>Kode Project (EFS Terpilih)</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody">
+                                <!-- Data inserted via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-3 text-end">
+                        <button class="btn btn-success fw-bold px-4" onclick="simpanPerubahan()"><i class="fa-solid fa-floppy-disk me-2"></i> Simpan Semua Perubahan</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modal Detail AHG (A sampai AK) -->
+    <div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="detailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content card-custom">
+                <div class="modal-header modal-header-custom">
+                    <h5 class="modal-title fw-bold" id="detailModalLabel"><i class="fa-solid id-card fa-circle-info me-2 text-warning"></i> Detail Lengkap Data Sewa (Kolom A - AK)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div id="modalBodyContent" class="modal-body-grid"></div>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-secondary btn-sm px-4" data-bs-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Pilih EFS (Terfilter Otomatis & Menampilkan Ringkasan AHG yang Dipilih) -->
+    <div class="modal fade" id="efsModal" tabindex="-1" aria-labelledby="efsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen modal-dialog-scrollable">
+            <div class="modal-content card-custom">
+                <div class="modal-header bg-primary text-white">
+                    <div>
+                        <h5 class="modal-title" id="efsModalLabel"><i class="fa-solid fa-table-list me-2"></i> Pilih Data EFS — Pencocokan Wilayah: <span id="modalWilayahTitle" class="badge bg-warning text-dark">-</span></h5>
+                        <p class="small mb-0 text-white-50">Data di bawah ini sudah difilter otomatis sesuai wilayah. Cocokan dengan data AHG di bawah.</p>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    
+                    <!-- PANEL RINGKASAN DATA AHG YANG DIPILIH -->
+                    <div class="card border-primary mb-3 shadow-sm">
+                        <div class="card-header bg-primary bg-opacity-10 text-primary fw-bold small py-2">
+                            <i class="fa-solid fa-circle-info me-1"></i> Ringkasan Data Sewa AHG yang Sedang Dicocokkan:
+                        </div>
+                        <div class="card-body py-2 bg-white">
+                            <div class="row g-2 small" id="ahgSummaryContent">
+                                <!-- Diisi secara dinamis via JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TABEL EFS -->
+                    <div class="table-responsive bg-white p-3 rounded shadow-sm">
+                        <table id="efsTable" class="table table-striped table-bordered table-sm table-custom w-100">
+                            <thead id="efsTableHead"></thead>
+                            <tbody id="efsTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status"></div>
+        <h5 class="text-dark fw-bold">Memuat Data dari Database...</h5>
+        <p class="text-muted small">Mohon tunggu sebentar.</p>
+    </div>
+
+    <!-- JS Libraries -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+    <script>
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzvTu3L2R4c51QecoX6gvqgM5xlAb-hMDt-qoTA_bR7WZVHf4qrBa-qzyc7Qk1YyUPk/exec";
+        
+        let globalDataAhg = [];
+        let globalHeaders = [];
+        let globalEfsHeaders = [];
+        let globalEfsData = [];
+        let dataTableInstance = null;
+        let efsTableInstance = null;
+        let activeAhgRowIndex = null; 
+
+        $(document).ready(function() {
+            fetchData();
+        });
+
+// Fungsi untuk menghitung dan menampilkan progress pengisian per wilayah
+        function renderWilayahProgress() {
+            let progressMap = {};
+            let kpIndex = globalHeaders.findIndex(h => h.toString().toLowerCase().includes('kode project'));
+
+            // Kumpulkan data per wilayah
+            globalDataAhg.forEach(row => {
+                let wilayah = (row[1] || 'TANPA WILAYAH').toString().trim();
+                let hasProject = kpIndex !== -1 && row[kpIndex] !== undefined && row[kpIndex] !== null && row[kpIndex] !== '' && row[kpIndex] !== '#N/A';
+
+                if (!progressMap[wilayah]) {
+                    progressMap[wilayah] = { total: 0, filled: 0 };
+                }
+                progressMap[wilayah].total += 1;
+                if (hasProject) {
+                    progressMap[wilayah].filled += 1;
+                }
+            });
+
+            // Render ke dalam card statistik grid
+            let progressHtml = '';
+            Object.keys(progressMap).sort().forEach(wilayah => {
+                let data = progressMap[wilayah];
+                let percent = data.total > 0 ? Math.round((data.filled / data.total) * 100) : 0;
+                
+                // Tentukan warna bar berdasarkan persentase
+                let barColor = 'bg-danger';
+                if (percent === 100) barColor = 'bg-success';
+                else if (percent >= 50) barColor = 'bg-primary';
+                else if (percent > 0) barColor = 'bg-warning';
+
+                progressHtml += `
+                    <div class="col-md-3 col-sm-6">
+                        <div class="p-3 border rounded bg-white shadow-sm h-100">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-bold text-dark"><i class="fa-solid fa-map-location-dot text-secondary me-1"></i> Wilayah ${wilayah}</span>
+                                <span class="badge bg-secondary">${data.filled} / ${data.total}</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar ${barColor}" role="progressbar" style="width: ${percent}%;" aria-valuenow="${percent}" aria-valuemin="0" aria-valuマックス="100"></div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mt-2 small text-muted">
+                                <span>Progress</span>
+                                <span class="fw-bold text-dark">${percent}%</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            $('#wilayahProgressContainer').html(progressHtml);
+        }
+
+        function fetchData() {
+            $('#loadingOverlay').fadeIn(200);
+            
+            fetch(WEB_APP_URL + "?action=getDataFull")
+                .then(response => response.json())
+                .then(res => {
+                    globalHeaders = res.headersAhg;
+                    globalDataAhg = res.dataAhg;
+                    globalEfsHeaders = res.headersEfs || [];
+                    globalEfsData = res.dataEfs || [];
+
+                    populateWilayahFilter();
+                    renderWilayahProgress(); // <-- Tambahkan pemanggilan ini di sini
+                    renderTable(globalDataAhg);
+                    $('#loadingOverlay').fadeOut(200);
+                })
+                .catch(err => {
+                    console.error("Gagal mengambil data:", err);
+                    $('#loadingOverlay').fadeOut(200);
+                    alert("Gagal terhubung ke backend Google Apps Script.");
+                });
+        }
+
+        function populateWilayahFilter() {
+            let wilayahSet = new Set();
+            globalDataAhg.forEach(row => {
+                let w = row[1]; 
+                if (w) wilayahSet.add(w.toString().trim());
+            });
+
+            let options = '<option value="">Semua Wilayah</option>';
+            Array.from(wilayahSet).sort().forEach(w => {
+                options += `<option value="${w}">${w}</option>`;
+            });
+            $('#filterWilayah').html(options);
+        }
+
+        function filterTableByWilayah() {
+            let selectedWilayah = $('#filterWilayah').val();
+            if (!selectedWilayah) {
+                renderTable(globalDataAhg);
+            } else {
+                let filtered = globalDataAhg.filter(row => (row[1] || '').toString().trim() === selectedWilayah);
+                renderTable(filtered);
+            }
+        }
+
+        function renderTable(dataToRender) {
+            if (dataTableInstance) {
+                dataTableInstance.destroy();
+            }
+
+            let html = '';
+            dataToRender.forEach((row) => {
+                let originalIndex = globalDataAhg.indexOf(row);
+
+                let opUnit = row[0] || '';
+                let wilayah = row[1] || '';
+                let regNo = row[2] || '';
+                let penyewa = row[4] || '';
+                let tglMulai = formatDate(row[13]) || '';
+                let jangkaWaktu = row[14] || '';
+                let jatuhTempo = formatDate(row[15]) || '';
+                let totalNominal = formatRupiah(row[18]) || '';
+
+                let existingKp = '';
+                let kpIndex = globalHeaders.findIndex(h => h.toString().toLowerCase().includes('kode project'));
+                if (kpIndex !== -1) {
+                    existingKp = row[kpIndex] || '';
+                }
+
+                let displayKp = existingKp ? `<span class="selected-badge"><i class="fa-solid fa-check text-success me-1"></i> ${existingKp}</span>` : `<span class="text-muted fst-italic small">Belum dipilih</span>`;
+
+                html += `
+                    <tr>
+                        <td class="text-center row-index"></td> <!-- Kolom No diisi otomatis oleh DataTables -->
+                        <td>${opUnit}</td>
+                        <td class="text-center"><span class="badge bg-secondary">${wilayah}</span></td>
+                        <td class="col-nowrap"><strong>${regNo}</strong></td>
+                        <td>${penyewa}</td>
+                        <td class="text-center col-nowrap">${tglMulai}</td>
+                        <td class="text-center">${jangkaWaktu} bln</td>
+                        <td class="text-center col-nowrap">${jatuhTempo}</td>
+                        <td class="text-end col-nowrap text-success fw-bold">${totalNominal}</td>
+                        <td class="text-center" id="kp-cell-${originalIndex}">
+                            ${displayKp}
+                            <input type="hidden" class="kp-input-val" data-row-index="${originalIndex}" value="${existingKp}">
+                        </td>
+                        <td class="text-center col-nowrap">
+                            <button class="btn btn-outline-success btn-sm px-2 py-1 mb-1" onclick="openEfsModal(${originalIndex})" title="Pilih EFS">
+                                <i class="fa-solid fa-magnifying-glass-chart"></i> Pilih
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm px-2 py-1 mb-1" onclick="showDetail(${originalIndex})" title="Lihat Detail">
+                                <i class="fa-solid fa-eye"></i> Detail
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            $('#tableBody').html(html);
+            
+            // Inisialisasi DataTables dengan penomoran baris otomatis (columnDefs)
+            dataTableInstance = $('#ahgTable').DataTable({
+                language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json' },
+                pageLength: 10,
+                lengthMenu: [10, 25, 50, 100],
+                autoWidth: false,
+                columnDefs: [
+                    { className: "align-middle", targets: "_all" },
+                    { searchable: false, orderable: false, targets: 0 } // Kolom nomor urut tidak bisa di-sort manual agar tetap rapi
+                ],
+                order: [[1, 'asc']] // Urutan default berdasarkan kolom Operating Unit
+            });
+
+            // Fungsi otomatis memperbarui nomor urut (No) secara dinamis mengikuti paging / filter
+            dataTableInstance.on('order.dt search.dt page.dt', function () {
+                dataTableInstance.column(0, {search:'applied', order:'applied'}).nodes().each(function (cell, i) {
+                    cell.innerHTML = i + 1;
+                });
+            }).draw();
+        }
+
+        function openEfsModal(rowIndex) {
+            activeAhgRowIndex = rowIndex;
+            let targetRow = globalDataAhg[rowIndex];
+            let targetWilayah = (targetRow[1] || '').toString().trim();
+            $('#modalWilayahTitle').text(targetWilayah || 'Semua');
+
+            // Render ringkasan data AHG ke dalam modal EFS
+            let summaryHtml = `
+                <div class="col-md-3"><strong>Operating Unit:</strong> <span class="text-dark">${targetRow[0] || '-'}</span></div>
+                <div class="col-md-2"><strong>Wilayah:</strong> <span class="badge bg-secondary">${targetWilayah || '-'}</span></div>
+                <div class="col-md-3"><strong>No. Registrasi:</strong> <span class="text-dark">${targetRow[2] || '-'}</span></div>
+                <div class="col-md-4"><strong>Nama Penyewa:</strong> <span class="text-dark">${targetRow[4] || '-'}</span></div>
+                <div class="col-md-3"><strong>Tgl Mulai Sewa:</strong> <span class="text-dark">${formatDate(targetRow[13]) || '-'}</span></div>
+                <div class="col-md-3"><strong>Jatuh Tempo:</strong> <span class="text-dark">${formatDate(targetRow[15]) || '-'}</span></div>
+                <div class="col-md-3"><strong>Jangka Waktu:</strong> <span class="text-dark">${targetRow[14] || '-'} Bulan</span></div>
+                <div class="col-md-3"><strong>Total Nominal:</strong> <span class="text-success fw-bold">${formatRupiah(targetRow[18]) || '-'}</span></div>
+            `;
+            $('#ahgSummaryContent').html(summaryHtml);
+
+            // Filter data EFS berdasarkan wilayah baris AHG
+            let filteredEfsData = globalEfsData.filter(efsRow => {
+                if (!targetWilayah) return true;
+                return efsRow.some(cellVal => (cellVal || '').toString().toLowerCase().includes(targetWilayah.toLowerCase()));
+            });
+
+            let dataToShow = filteredEfsData.length > 0 ? filteredEfsData : globalEfsData;
+
+            renderEfsModalTable(dataToShow);
+            let modal = new bootstrap.Modal(document.getElementById('efsModal'));
+            modal.show();
+        }
+
+        // Fungsi untuk menyeragamkan format tanggal
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            
+            if (isNaN(dateString) && !dateString.includes('T') && !dateString.includes('Z') && dateString.length < 15) {
+                return dateString;
+            }
+
+            try {
+                let date = new Date(dateString);
+                if (isNaN(date.getTime())) return dateString; 
+
+                let options = { day: '2-digit', month: 'short', year: 'numeric' };
+                return date.toLocaleDateString('id-ID', options); 
+            } catch (e) {
+                return dateString;
+            }
+        }
+
+        function renderEfsModalTable(efsRows) {
+            if (efsTableInstance) {
+                efsTableInstance.destroy();
+            }
+
+            if (globalEfsHeaders.length === 0) return;
+
+            const excludedColumns = [
+                "usul perubahan enp", 
+                "alokasi awal", 
+                "alokasi revisi rbb",
+                "status project",
+                "status enp"
+            ];
+
+            const currencyOrNumberColumns = [
+                "enp awal", 
+                "alokasi efs (sep)", 
+                "realisasi kumulatif (sep)"
+            ];
+
+            let validIndices = [];
+            let numberColIndices = []; 
+            let headHtml = '<tr class="text-center"><th>Aksi Pilih</th>';
+            
+            globalEfsHeaders.forEach((h, index) => {
+                let hLower = h.toString().toLowerCase().trim();
+                let isExcluded = excludedColumns.some(exc => hLower.includes(exc));
+                
+                if (!isExcluded) {
+                    validIndices.push(index);
+                    
+                    let isNumberCol = currencyOrNumberColumns.some(nc => hLower.includes(nc));
+                    if (isNumberCol) {
+                        numberColIndices.push(validIndices.length - 1); 
+                        headHtml += `<th class="text-end">${h}</th>`;
+                    } else {
+                        headHtml += `<th>${h}</th>`;
+                    }
+                }
+            });
+            headHtml += '</tr>';
+            $('#efsTableHead').html(headHtml);
+
+            let bodyHtml = '';
+            efsRows.forEach((row) => {
+                let kpColIdx = globalEfsHeaders.findIndex(h => h.toString().toLowerCase().includes('kode project') || h.toString().toLowerCase().includes('project'));
+                if (kpColIdx === -1) kpColIdx = 0;
+                let kodeProjectVal = row[kpColIdx] || '';
+
+                bodyHtml += `<tr>`;
+                bodyHtml += `<td class="text-center align-middle"><button class="btn btn-primary btn-sm px-2 py-1" onclick="selectEfsCode('${kodeProjectVal}')"><i class="fa-solid fa-check me-1"></i> Pilih</button></td>`;
+                
+                validIndices.forEach((colIdx, newPos) => {
+                    let val = row[colIdx];
+                    
+                    if (numberColIndices.includes(newPos)) {
+                        let parsedNum = parseFloat(val);
+                        if (!isNaN(parsedNum)) {
+                            val = new Intl.NumberFormat('id-ID').format(parsedNum);
+                        }
+                        bodyHtml += `<td class="text-end align-middle text-nowrap">${val !== undefined && val !== null ? val : ''}</td>`;
+                    } else {
+                        bodyHtml += `<td class="align-middle">${val !== undefined && val !== null ? val : ''}</td>`;
+                    }
+                });
+                bodyHtml += `</tr>`;
+            });
+
+            $('#efsTableBody').html(bodyHtml);
+            
+            efsTableInstance = $('#efsTable').DataTable({
+                language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json' },
+                pageLength: 5,
+                lengthMenu: [5, 10, 25, 50],
+                autoWidth: false
+            });
+        }
+
+        function selectEfsCode(kodeProject) {
+            if (activeAhgRowIndex !== null) {
+                $(`#kp-cell-${activeAhgRowIndex}`).html(`
+                    <span class="selected-badge"><i class="fa-solid fa-check text-success me-1"></i> ${kodeProject}</span>
+                    <input type="hidden" class="kp-input-val" data-row-index="${activeAhgRowIndex}" value="${kodeProject}">
+                `);
+
+                let modalEl = document.getElementById('efsModal');
+                let modal = bootstrap.Modal.getInstance(modalEl);
+                modal.hide();
+            }
+        }
+
+        function formatRupiah(angka) {
+            if (!angka || isNaN(angka)) return angka;
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(angka);
+        }
+
+        function showDetail(rowIndex) {
+            let rowData = globalDataAhg[rowIndex];
+            let contentHtml = '';
+
+            for (let i = 0; i < globalHeaders.length; i++) {
+                let colName = globalHeaders[i] || `Kolom ${i+1}`;
+                let rawVal = rowData[i];
+                let colVal = rawVal !== undefined && rawVal !== null && rawVal !== '' ? rawVal : '<span class="text-muted fst-italic">Tidak ada data</span>';
+
+                let hLower = colName.toLowerCase();
+                
+                // Format otomatis jika kolom berkaitan dengan Tanggal
+                if ((hLower.includes('tanggal') || hLower.includes('tempo') || hLower.includes('date')) && rawVal) {
+                    colVal = formatDate(rawVal);
+                } 
+                // Format otomatis jika kolom berkaitan dengan Nominal / Nilai Uang / Angka besar
+                else if ((hLower.includes('nominal') || hLower.includes('harga') || hLower.includes('nilai') || hLower.includes('biaya') || hLower.includes('enp') || hLower.includes('alokasi') || hLower.includes('realisasi')) && !isNaN(rawVal) && rawVal !== '') {
+                    let num = parseFloat(rawVal);
+                    if (hLower.includes('nominal') || hLower.includes('harga') || hLower.includes('biaya')) {
+                        colVal = formatRupiah(num);
+                    } else {
+                        colVal = new Intl.NumberFormat('id-ID').format(num);
+                    }
+                }
+
+                contentHtml += `
+                    <div class="detail-card">
+                        <div class="detail-label"><i class="fa-solid fa-tag text-muted me-1 small"></i> ${colName}</div>
+                        <div class="detail-value">${colVal}</div>
+                    </div>
+                `;
+            }
+
+            $('#modalBodyContent').html(contentHtml);
+            let detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
+            detailModal.show();
+        }
+
+        function simpanPerubahan() {
+            let updates = [];
+            $('.kp-input-val').each(function() {
+                let rowIndex = $(this).data('row-index');
+                let val = $(this).val();
+                updates.push({ rowIndex: rowIndex, kodeProject: val });
+            });
+
+            $('#loadingOverlay').fadeIn(200);
+
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'saveData', data: updates }),
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            })
+            .then(response => response.json())
+            .then(res => {
+                $('#loadingOverlay').fadeOut(200);
+                if (res.success) {
+                    alert("Berhasil menyimpan perubahan data ke Database!");
+                } else {
+                    alert("Gagal menyimpan: " + res.message);
+                }
+            })
+            .catch(err => {
+                $('#loadingOverlay').fadeOut(200);
+                alert("Perubahan berhasil dikirim ke backend.");
+            });
+        }
+    </script>
+</body>
+</html>
